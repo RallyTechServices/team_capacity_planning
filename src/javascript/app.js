@@ -19,8 +19,8 @@ Ext.define("CArABU.app.TCApp", {
         this.down('#message_box').update(this.getContext().getUser());
 
         this.start_rls = this.down('#selector_box').add({
-            xtype:'rallyreleasecombobox',
-            fieldLabel: 'Starting Release: ',
+            xtype:'rallyiterationcombobox',
+            fieldLabel: 'Starting Iteration: ',
             itemId: 'start_rls',
             name: 'start_rls',
             margin: 10,
@@ -35,8 +35,8 @@ Ext.define("CArABU.app.TCApp", {
           });
 
         this.end_rls = this.down('#selector_box').add({
-            xtype:'rallyreleasecombobox',
-            fieldLabel: 'Ending Release: ',
+            xtype:'rallyiterationcombobox',
+            fieldLabel: 'Ending Iteration: ',
             itemId: 'end_rls',
             name: 'end_rls',
             margin: 10,
@@ -77,10 +77,10 @@ Ext.define("CArABU.app.TCApp", {
         if (this.down('#display_box')){
             this.down('#display_box').removeAll();
         }
-        var startReleaseStart = this.start_rls.getRecord().get('ReleaseStartDate');
-        var startReleaseEnd = this.start_rls.getRecord().get('ReleaseDate');
-        var endReleaseStart = this.end_rls.getRecord().get('ReleaseStartDate');
-        var endReleaseEnd = this.end_rls.getRecord().get('ReleaseDate');
+        var startReleaseStart = this.start_rls.getRecord().get('StartDate');
+        var startReleaseEnd = this.start_rls.getRecord().get('EndDate');
+        var endReleaseStart = this.end_rls.getRecord().get('StartDate');
+        var endReleaseEnd = this.end_rls.getRecord().get('EndDate');
 
 /*
 
