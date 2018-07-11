@@ -60,16 +60,16 @@ Ext.define("CArABU.app.TCApp", {
             }
         });
 
-//        this.down('#selector_box').add({
-//            xtype: 'rallybutton',
-//            text: 'Export',
-//            margin: '10 10 10 10',
-//            defaultAlign: 'right',
-//            listeners: {
-//                scope: this,
-//                click: this._export
-//            }
-//        });
+        this.down('#selector_box').add({
+            xtype: 'rallybutton',
+            text: 'Export',
+            margin: '10 10 10 10',
+            defaultAlign: 'right',
+            listeners: {
+                scope: this,
+                click: this._export
+            }
+        });
     },
 
     _setReleaseFilters: function() {
@@ -156,13 +156,13 @@ Ext.define("CArABU.app.TCApp", {
             model: 'Iteration',
             fetch: ['Name',"StartDate","EndDate",'Project','PlannedVelocity','PlanEstimate', 'ObjectID'],
             filters: [
-              {property:"StartDate", operator: '<=', value: releaseEndISO},
+              {property:"StartDate", operator: '<', value: releaseEndISO},
               {property:"EndDate", operator: '>=', value: releaseStartISO}
             ],
             limit: 2000,
             pageSize: 2000,
             sorters: [{property:"EndDate", direction:'ASC'}],
-            context: {
+             context: {
 //                project: 'https://us1.rallydev.com/slm/webservice/v2.0/project/20150591812',
                 projectScopeUp: false,
                 projectScopeDown: true
@@ -575,6 +575,10 @@ this.logger.log("Display:",rows);
 //              {dataIndex: "TotalP", text: "Total Planned", width: 60}
           ];
 
+      var export_columns = {
+                "Team": "Team"
+                };
+
 this.logger.log("Col1:",grid_columns,keys);
           for (var i = 0; i < keys.length; i++) {
             if (keys[i] != "Team" &&
@@ -582,13 +586,13 @@ this.logger.log("Col1:",grid_columns,keys);
 //this.logger.log("Col2:",keys[i]);
               if (keys[i].charAt(keys[i].length-1) === "A") {
                 iteration_column = {dataIndex: keys[i], text: keys[i].slice(0,3) + " Available", width: 60, summaryType: 'sum'};
-//                export_columns[keys[i]] = keys[i].slice(0,3) + " Available";
+                export_columns[keys[i]] = keys[i].slice(0,3) + " Available";
              }
             grid_columns.push(iteration_column);
            }
 //this.logger.log("Col3:",iteration_column);
           }
-//      this.export_columns = export_columns;
+      this.export_columns = export_columns;
       return grid_columns;
 this.logger.log("Col4:",grid_columns);
 
