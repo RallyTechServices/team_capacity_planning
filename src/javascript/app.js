@@ -4,7 +4,7 @@ Ext.define("CArABU.app.TCApp", {
     logger: new CArABU.technicalservices.Logger(),
     defaults: { margin: 10 },
     items: [
-        {xtype:'container',itemId:'message_box',tpl:'Hello, <tpl>{_refObjectName}</tpl>'},
+//        {xtype:'container',itemId:'message_box',tpl:'Hello, <tpl>{_refObjectName}</tpl>'},
         {xtype:'container',itemId:'selector_box', layout: 'hbox'},
         {xtype:'container',itemId:'display_box'}
     ],
@@ -16,7 +16,16 @@ Ext.define("CArABU.app.TCApp", {
     launch: function() {
         var me = this;
 
-        this.down('#message_box').update(this.getContext().getUser());
+
+        this.projectUtility = Ext.create('CA.agile.technicalservices.util.ProjectUtility', {
+            listeners: {
+                ready: this._updateProjectButtonStatus,
+                fetcherror: this.showErrorNotification,
+                scope: this
+            }
+        });
+
+//        this.down('#message_box').update(this.getContext().getUser());
 
         this.start_rls = this.down('#selector_box').add({
             xtype:'rallyiterationcombobox',
@@ -51,8 +60,35 @@ Ext.define("CArABU.app.TCApp", {
 
         this.down('#selector_box').add({
             xtype: 'rallybutton',
+            margin: '5 5 5 5',
+            text: 'Select Projects',
+            itemId: 'projectButton',
+            disabled: true,
+            cls: 'secondary rly-small',
+            listeners: {
+                click: this._selectProjects,
+                scope: this
+            }
+        });
+
+        var clearButton = this.down('#selector_box').add({
+            xtype: 'rallybutton',
+            margin: '5 5 5 5',
+            text: 'Clear',
+            itemId: 'clearProjectButton',
+            visible: false,
+            cls: 'secondary rly-small clear-button',
+            listeners: {
+                click: this._updateSelectedProjects,
+                scope: this
+            }
+        });
+        clearButton.setVisible(false);
+
+        this.down('#selector_box').add({
+            xtype: 'rallybutton',
             text: 'Go',
-            margin: '10 10 10 10',
+            margin: '5 5 5 5',
             defaultAlign: 'right',
             listeners: {
                 click: this._setReleaseFilters,
@@ -63,13 +99,21 @@ Ext.define("CArABU.app.TCApp", {
         this.down('#selector_box').add({
             xtype: 'rallybutton',
             text: 'Export',
-            margin: '10 10 10 10',
+            margin: '5 5 5 5',
             defaultAlign: 'right',
             listeners: {
                 scope: this,
                 click: this._export
             }
         });
+
+    },
+
+    _updateProjectButtonStatus: function(){
+        this.down('#projectButton').setDisabled(false);
+    },
+    showErrorNotification: function(msg){
+        Rally.ui.notify.Notifier.showError({message: msg});
     },
 
     _setReleaseFilters: function() {
@@ -82,13 +126,6 @@ Ext.define("CArABU.app.TCApp", {
         var endReleaseStart = this.end_rls.getRecord().get('StartDate');
         var endReleaseEnd = this.end_rls.getRecord().get('EndDate');
 
-/*
-
-  Call with Visa Wed 2-Aug - use only End Dates from Release Selections
-
-*/
-
-//        var releaseStartISO = Rally.util.DateTime.toIsoString(startReleaseStart,true);
         var releaseStartISO = Rally.util.DateTime.toIsoString(startReleaseEnd,true);
         var releaseEndISO = Rally.util.DateTime.toIsoString(endReleaseEnd,true);
 
@@ -106,10 +143,12 @@ Ext.define("CArABU.app.TCApp", {
         this.releaseEndISO = releaseEndISO;
 
 //        this._countTBIterations(releaseStartISO,releaseEndISO,earliestStartISO);
+
         this._fetchValidIterations(releaseStartISO,releaseEndISO,earliestStartISO);
 
     },
 
+/*
     _countTBIterations: function(releaseStartISO,releaseEndISO,earliestStartISO) {
         var me = this;
 
@@ -145,6 +184,7 @@ Ext.define("CArABU.app.TCApp", {
               }).always(function() {
               });
     },
+*/
 
 //    _fetchValidIterations: function(num2get,releaseStartISO,releaseEndISO,earliestStartISO) {
     _fetchValidIterations: function(releaseStartISO,releaseEndISO,earliestStartISO) {
@@ -163,6 +203,7 @@ Ext.define("CArABU.app.TCApp", {
             pageSize: 2000,
             sorters: [{property:"EndDate", direction:'ASC'}],
              context: {
+//                project: 'https://us1.rallydev.com/slm/webservice/v2.0/project/' + p,
 //                project: 'https://us1.rallydev.com/slm/webservice/v2.0/project/20150591812',
                 projectScopeUp: false,
                 projectScopeDown: true
@@ -185,10 +226,15 @@ me.logger.log("Sorted:",iterations);
             }
 //                me._loadFeatures(iterations,releaseStartISO,releaseEndISO);
 
-                me._aggregateIterationData(iterations);
 /*
             Here be dragons
 */
+//        Ext.Array.each(projects, function(p){
+//            promises.push(this._fetchValidIterations(p,releaseStartISO,releaseEndISO,earliestStartISO));
+//        }, this);
+
+                me._aggregateIterationData(iterations);
+
 me.logger.log("do I blow up here");
 //            me._displayGrid(rows);
 me.logger.log("or here");              },
@@ -320,10 +366,62 @@ me.logger.log("after flatten:",rows);
       return deferred.promise;
     },
 */
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    getTimeboxProjects: function(){
+        if (!this.selectedProjects || this.selectedProjects.length === 0){
+            return this.projectUtility.getProjectsInHierarchy(this.getContext().getProject().ObjectID);
+        }
+        return this.selectedProjects;
+    },
+
+    _selectProjects: function(){
+        this.logger.log('_selectProjects');
+
+        var height = Ext.getBody().getViewSize().height,
+            width = Ext.getBody().getViewSize().width;
+
+        var dlg = Ext.create('CA.agile.technicalservices.util.dialog.ProjectPicker', {
+            projectRoot: this.projectUtility.getProjectRoot(this.getContext().getProject().ObjectID),
+            height: height,
+            listeners: {
+                projectsselected: this._updateSelectedProjects,
+                scope: this
+            }
+        });
+        dlg.alignTo(Ext.getBody(), "t-t");
+
+    },
+    _updateSelectedProjects: function(ctl, selectedProjects){
+        this.logger.log('_updateSelectedProjects', selectedProjects);
+        if (ctl.itemId === 'clearProjectButton'){
+            selectedProjects = null;
+        }
+
+        this.selectedProjects = selectedProjects && selectedProjects.__include || [];
+
+        if (this.selectedProjects.length > 0){
+            this.down('#projectButton').setText(this.selectedProjects.length + ' Projects');
+            this.down('#projectButton').removeCls('secondary');
+            this.down('#projectButton').addCls('primary');
+            this.down('#projectButton').addCls('selected-button');
+            this.down('#clearProjectButton').setVisible(true);
+        } else {
+            this.down('#projectButton').setText('Select Projects');
+            this.down('#projectButton').removeCls('primary');
+            this.down('#projectButton').addCls('secondary');
+            this.down('#projectButton').removeCls('selected-button');
+            this.down('#clearProjectButton').setVisible(false);
+        }
+    },
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     _getAvailability: function(rows) {
         this.setLoading("Updating Team Availability...");
         var me = this;
         var promises = [];
+        var drows = [];
+
 me.logger.log("GA1:",rows);
 
         Ext.Array.each(rows, function(row) {
@@ -336,11 +434,13 @@ me.logger.log("Promises:", promises);
 
         Deft.Chain.sequence(promises, this).then ({
             success: function(row) {
-//me.logger.log("GA_sprint_count:", iterations.length,iterations);
 
 me.logger.log("GA2:",row);
-            me._displayGrid(row);
+
+             me._displayGrid(row);
+
           },
+
           failure: function(error_message){
               alert(error_message);
           }
@@ -401,8 +501,10 @@ me.logger.log("GA_row mid1:",iterations);
 
     _aggregateIterationData: function(iterations) {
         this.setLoading("Aggregating data...");
-
         var me = this;
+
+        var projects = Ext.Array.unique(me.getTimeboxProjects());
+me.logger.log("projects",projects);
 
         var iteration_names = [];
         for (var i = 0;  i < iterations.length; i++) {
@@ -422,17 +524,15 @@ me.logger.log("GA_row mid1:",iterations);
             columns = [];
 
         if ( iterations.length === 0 ) { return feature_hash; }
-me.logger.log("CA0:",iterations,iterations[0].data.StartDate);
+me.logger.log("CA0:",projects, iterations,iterations[0].data.StartDate,iterations[0].data.Project.ObjectID);
 
         Ext.Array.each(iterations, function(iteration){
 
-//me.logger.log("CA1:",feature_ID, release_name);
+            if (projects.indexOf(iteration.data.Project.ObjectID) > -1) {
 
-//me.logger.log("CA2:", release_state);
-
-          if (iteration.data.Project.Name == null) {
+            if (iteration.data.Project.Name == null) {
             team_name = 'Unassigned';
-          } else {
+            } else {
             team_name = iteration.data.Project.Name;
             team_oid = iteration.data.Project.ObjectID;
             iteration_name = iteration.data.Name;
@@ -442,9 +542,8 @@ me.logger.log("CA0:",iterations,iterations[0].data.StartDate);
             }
             iteration_PE = iteration.data.PlanEstimate;
             iteration_AP = iteration_PV - iteration_PE;
-          }
+            }
 //me.logger.log("CA4:", story.data.FormattedID,iteration_name,iteration_PV,iteration_PE,iteration_AP);
-
 
             if (Ext.isEmpty(feature_hash[team_oid])) {
               if (row.Team != "DUMMY") {rows.push(row);}
@@ -461,7 +560,6 @@ me.logger.log("CA0:",iterations,iterations[0].data.StartDate);
               }
 
             }
-me.logger.log("CA6:", feature_hash,row);
 
 /*
             if (Ext.isEmpty(feature_hash[feature_ID].teams[team_name].sprints[iteration_name])) {
@@ -487,8 +585,12 @@ me.logger.log("CA7:", feature_hash,row);
         row["Planned"] = row["UnscheduledP"] + row["PriorP"] + row["TotalP"];
 //me.logger.log(row["Planned"], row["UnscheduledP"], row["PriorP"], row["TotalP"]);
 */
-        });
-        rows.push(row);
+        }
+me.logger.log("CA6:", feature_hash,row);
+
+      });
+      rows.push(row);
+
 this.logger.log("Feature Hash:",feature_hash, rows);
 //        return rows;
             me._getAvailability(rows);
